@@ -899,7 +899,25 @@ const appVue = createApp({
                 alert("Judul dan Deskripsi wajib diisi!"); return;
             }
 
+            const reqXP = parseInt(newBounty.rewardXP) || 0;
+            const reqCoin = parseInt(newBounty.rewardCoin) || 0;
+
+            if (teacherData.xp < reqXP) {
+                alert(`XP tidak cukup! Kamu butuh ${reqXP} XP, tapi hanya punya ${teacherData.xp} XP.`);
+                return;
+            }
+            if (teacherData.coin < reqCoin) {
+                alert(`Koin tidak cukup! Kamu butuh ${reqCoin} Koin, tapi hanya punya ${teacherData.coin} Koin.`);
+                return;
+            }
+
             try {
+                // Deduct rewards from teacher
+                await update(dbRef(db, `teachers/${user.value.uid}`), {
+                    xp: teacherData.xp - reqXP,
+                    coin: teacherData.coin - reqCoin
+                });
+
                 const bountyData = {
                     ...newBounty,
                     authorId: user.value.uid,
@@ -918,7 +936,7 @@ const appVue = createApp({
                 newBounty.category = '';
                 newBounty.imageUrl = null; // Reset image
                 isCreateBountyModalOpen.value = false;
-                alert("Misi berhasil dibuat!");
+                alert("Misi berhasil dibuat! Hadiah telah dipotong dari saldo Anda.");
             } catch (e) {
                 console.error(e);
                 alert("Gagal membuat misi.");
