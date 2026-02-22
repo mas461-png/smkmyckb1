@@ -4145,6 +4145,20 @@ async function setupTeachersPage() {
             });
             createLucideIcons();
 
+            // --- Populasikan Dropdown Magic Control Guru ---
+            const magicTeacherSelect = document.getElementById('magic-teacher-select');
+            if (magicTeacherSelect) {
+                const currentSelection = magicTeacherSelect.value;
+                magicTeacherSelect.innerHTML = '<option value="">Pilih Guru...</option>';
+                Object.values(teachers).sort((a, b) => (a.nama || '').localeCompare(b.nama || '')).forEach(teacher => {
+                    const opt = document.createElement('option');
+                    opt.value = teacher.uid;
+                    opt.textContent = teacher.nama;
+                    if (teacher.uid === currentSelection) opt.selected = true;
+                    magicTeacherSelect.appendChild(opt);
+                });
+            }
+
             // Add Listeners
             document.querySelectorAll('.edit-teacher-btn').forEach(btn => {
                 btn.onclick = () => {
@@ -4413,6 +4427,69 @@ async function setupTeachersPage() {
             }
         };
     }
+
+    // --- MAGIC CONTROLS FOR TEACHERS ---
+    const magicTeacherSelect = document.getElementById('magic-teacher-select');
+    const teacherStatType = document.getElementById('teacher-stat-type');
+    const teacherStatVal = document.getElementById('teacher-stat-val');
+    const teacherAddStatBtn = document.getElementById('teacher-add-stat');
+    const teacherSubStatBtn = document.getElementById('teacher-sub-stat');
+
+    const handleTeacherMagic = async (operation) => {
+        const teacherUid = magicTeacherSelect ? magicTeacherSelect.value : null;
+        if (!teacherUid) {
+            showToast('Pilih guru target!', true);
+            return;
+        }
+
+        const stat = teacherStatType.value;
+        const value = parseInt(teacherStatVal.value);
+        if (isNaN(value) || value <= 0) {
+            showToast('Nilai harus berupa angka positif!', true);
+            return;
+        }
+
+        try {
+            const teacherRef = ref(db, `teachers/${teacherUid}`);
+            const teacherSnap = await get(teacherRef);
+            if (!teacherSnap.exists()) return;
+
+            const teacherData = teacherSnap.val();
+            let currentValue = parseInt(teacherData[stat] || 0);
+            let newValue = operation === 'add' ? currentValue + value : currentValue - value;
+
+            const updates = {};
+            if (stat === 'hp') {
+                const maxHp = (teacherData.level || 1) * 100;
+                newValue = Math.max(0, Math.min(maxHp, newValue));
+            } else if (stat === 'mp') {
+                const maxMp = 50 + ((teacherData.level - 1) * 5);
+                newValue = Math.max(0, Math.min(maxMp, newValue));
+            } else if (stat === 'xp') {
+                const xpPerLevel = 1000;
+                const currentTotalXp = ((teacherData.level || 1) - 1) * xpPerLevel + (teacherData.xp || 0);
+                const newTotalXp = operation === 'add' ? currentTotalXp + value : Math.max(0, currentTotalXp - value);
+                updates[`level`] = Math.floor(newTotalXp / xpPerLevel) + 1;
+                updates[`xp`] = newTotalXp % xpPerLevel;
+            } else {
+                newValue = Math.max(0, newValue);
+            }
+
+            if (stat !== 'xp') {
+                updates[stat] = newValue;
+            }
+
+            await update(teacherRef, updates);
+            showToast(`Berhasil ${operation === 'add' ? 'menambah' : 'mengurangi'} ${value} ${stat.toUpperCase()} untuk Guru ${teacherData.nama}`);
+            audioPlayer.success();
+        } catch (error) {
+            console.error(error);
+            showToast('Gagal merapal sihir!', true);
+        }
+    };
+
+    if (teacherAddStatBtn) teacherAddStatBtn.onclick = () => handleTeacherMagic('add');
+    if (teacherSubStatBtn) teacherSubStatBtn.onclick = () => handleTeacherMagic('subtract');
 }
 // =======================================================
 //                  LOGIKA DASBOR ADMIN
