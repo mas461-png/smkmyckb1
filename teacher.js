@@ -769,15 +769,19 @@ const appVue = createApp({
             isCameraModalOpen.value = true;
             photoPreview.value = null;
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                // Gunakan facingMode: "user" agar otomatis pake kamera depan di HP
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user" },
+                    audio: false
+                });
                 cameraStream.value = stream;
-                // Wait for next tick/render
+                // Pastikan element video sudah ter-render sebelum memasang stream
                 setTimeout(() => {
                     if (videoRef.value) {
                         videoRef.value.srcObject = stream;
-                        videoRef.value.play();
+                        // videoRef.value.play(); // Play handled by autoplay attribute
                     }
-                }, 100);
+                }, 150);
             } catch (err) {
                 console.error(err);
                 alert("Gagal akses kamera: " + err.message);
