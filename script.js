@@ -120,6 +120,65 @@ let acakKataTimerId = null;
 let currentAcakKataBattleState = {}; // <-- MANTRA BARU: State untuk Acak Kata Battle
 let dungeonBattleState = null; // <-- MANTRA BARU: State untuk melacak pertarungan dari dungeon
 
+// --- SHARED CAMERA UTILITIES ---
+let videoDevices = [];
+let currentCameraIndex = 0;
+let activeCameraStream = null;
+
+const stopActiveCamera = () => {
+    if (activeCameraStream) {
+        activeCameraStream.getTracks().forEach(track => track.stop());
+        activeCameraStream = null;
+    }
+};
+
+const startCameraById = async (videoElement, deviceId) => {
+    stopActiveCamera();
+    const constraints = {
+        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "user" }
+    };
+    try {
+        activeCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoElement.srcObject = activeCameraStream;
+        return true;
+    } catch (err) {
+        console.error("Gagal start camera:", err);
+        if (deviceId) {
+            try {
+                activeCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = activeCameraStream;
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        return false;
+    }
+};
+
+const setupCameraSwitching = async (videoElement) => {
+    const switchBtn = document.getElementById('switch-camera-btn');
+    if (!switchBtn) return;
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+        if (videoDevices.length > 1) {
+            switchBtn.classList.remove('hidden');
+            currentCameraIndex = 0;
+            switchBtn.onclick = async () => {
+                currentCameraIndex = (currentCameraIndex + 1) % videoDevices.length;
+                await startCameraById(videoElement, videoDevices[currentCameraIndex].deviceId);
+            };
+        } else {
+            switchBtn.classList.add('hidden');
+        }
+    } catch (err) {
+        console.warn("Gagal enumerasi kamera:", err);
+        switchBtn.classList.add('hidden');
+    }
+};
+
 // --- MANTRA BARU: Audio Player dengan Tone.js (VERSI DIPERBARUI) ---
 const audioPlayer = {
     isReady: false,
@@ -4544,65 +4603,6 @@ function setupAdminDashboard() {
 
     let currentBattleState = {}; // Untuk menyimpan state battle (ID siswa, monster, dll)
     let html5QrCode;
-
-    // --- SHARED CAMERA STATE ---
-    let videoDevices = [];
-    let currentCameraIndex = 0;
-    let activeCameraStream = null;
-
-    const stopActiveCamera = () => {
-        if (activeCameraStream) {
-            activeCameraStream.getTracks().forEach(track => track.stop());
-            activeCameraStream = null;
-        }
-    };
-
-    const startCameraById = async (videoElement, deviceId) => {
-        stopActiveCamera();
-        const constraints = {
-            video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "user" }
-        };
-        try {
-            activeCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-            videoElement.srcObject = activeCameraStream;
-            return true;
-        } catch (err) {
-            console.error("Gagal start camera:", err);
-            // Fallback jika exact device gagal
-            if (deviceId) {
-                try {
-                    activeCameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    videoElement.srcObject = activeCameraStream;
-                    return true;
-                } catch (e) {
-                    return false;
-                }
-            }
-            return false;
-        }
-    };
-
-    const setupCameraSwitching = async (videoElement) => {
-        const switchBtn = document.getElementById('switch-camera-btn');
-        try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            videoDevices = devices.filter(device => device.kind === 'videoinput');
-
-            if (videoDevices.length > 1) {
-                switchBtn.classList.remove('hidden');
-                currentCameraIndex = 0;
-                switchBtn.onclick = async () => {
-                    currentCameraIndex = (currentCameraIndex + 1) % videoDevices.length;
-                    await startCameraById(videoElement, videoDevices[currentCameraIndex].deviceId);
-                };
-            } else {
-                switchBtn.classList.add('hidden');
-            }
-        } catch (err) {
-            console.warn("Gagal enumerasi kamera:", err);
-            switchBtn.classList.add('hidden');
-        }
-    };
 
 
     // --- FUNGSI MODAL SISWA (DENGAN SUARA) ---
