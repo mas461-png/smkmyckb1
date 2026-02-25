@@ -9259,7 +9259,10 @@ function renderBountyList(uid, bounties, bountyStatus) {
             const btnText = status === 'rejected' ? 'Coba Lagi' : 'Ambil Misi';
             const btnColor = status === 'rejected' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700';
 
-            actionButtonHTML = `<button onclick="openTakeBountyModal('${bountyId}', '${escapeHtml(bounty.title)}')" class="w-full py-2 rounded-lg ${btnColor} text-white font-bold text-sm transition shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 relative overflow-hidden group">
+            // Escape title for use inside an onclick handler string literal
+            const safeTitleForJs = escapeHtml(bounty.title || '').replace(/\\/g, '\\\\').replace(/&#039;/g, "\\&#039;");
+
+            actionButtonHTML = `<button onclick="openTakeBountyModal('${bountyId}', '${safeTitleForJs}')" class="w-full py-2 rounded-lg ${btnColor} text-white font-bold text-sm transition shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 relative overflow-hidden group">
                 <span class="relative z-10 flex justify-center items-center gap-2">
                     <i data-lucide="sword" class="w-4 h-4"></i>${btnText}
                 </span>
@@ -9285,16 +9288,16 @@ function renderBountyList(uid, bounties, bountyStatus) {
                  </div>
             </div>
             <div class="p-5 flex flex-col flex-grow">
-                <h3 class="font-bold text-lg text-slate-800 mb-1 leading-tight line-clamp-2" title="${bounty.title}">${bounty.title}</h3>
+                <h3 class="font-bold text-lg text-slate-800 mb-1 leading-tight line-clamp-2" title="${escapeHtml(bounty.title)}">${escapeHtml(bounty.title)}</h3>
                 <p class="text-xs text-slate-500 mb-3 flex items-center gap-1">
-                    <i data-lucide="user" class="w-3 h-3"></i> Oleh: ${bounty.authorName || 'Guru'}
+                    <i data-lucide="user" class="w-3 h-3"></i> Oleh: ${escapeHtml(bounty.authorName || 'Guru')}
                 </p>
                 <div class="text-slate-600 text-sm mb-4 line-clamp-3 flex-grow">
-                    ${bounty.description}
+                    ${escapeHtml(bounty.description)}
                 </div>
                 
                 <div class="flex items-center justify-between text-xs text-slate-500 border-t border-slate-50 pt-3 mb-4">
-                     <span class="flex items-center gap-1"><i data-lucide="users" class="w-3 h-3"></i> ${takersCount}/${bounty.maxTakers || 'âˆž'}</span>
+                     <span class="flex items-center gap-1"><i data-lucide="users" class="w-3 h-3"></i> ${takersCount}/${bounty.maxTakers || '∞'}</span>
                      <span class="flex items-center gap-1 font-bold text-yellow-600"><i data-lucide="coins" class="w-3 h-3"></i> ${bounty.rewardCoin} Koin</span>
                 </div>
 
